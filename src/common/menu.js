@@ -9,6 +9,7 @@ const menuData = [
       {
         name: '监控页',
         path: 'monitor',
+        // authority: 'admin',
       },
       {
         name: '分析页',
@@ -19,6 +20,21 @@ const menuData = [
         path: 'workplace',
         // hideInBreadcrumb: true,
         // hideInMenu: true,
+      },
+    ],
+  },
+  {
+    name: '系统管理',
+    icon: 'dashboard',
+    path: 'management',
+    children: [
+      {
+        name: '用户管理',
+        path: 'user',
+      },
+      {
+        name: '站点管理',
+        path: 'station',
       },
     ],
   },
