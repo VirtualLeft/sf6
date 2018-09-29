@@ -4,7 +4,7 @@ const menuData = [
   {
     name: '控制台',
     icon: 'dashboard',
-    path: 'dashboard',
+    path: 'dashboardant',
     children: [
       {
         name: '监控页',

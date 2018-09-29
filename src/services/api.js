@@ -1,5 +1,45 @@
-import { stringify } from 'qs';
+import {stringify} from 'qs';
 import request from '../utils/request';
+import _ from 'lodash';
+
+
+export async function addStation(params) {
+  let requestUrl = '/api/station';
+  return request(requestUrl, {
+    method: 'POST',
+    body: {
+      ..._.omit(params, ['name', 'longitude', 'latitude']),
+    },
+  });
+}
+
+export async function deleteStation(params) {
+  const {id} = params;
+  let requestUrl = `/api/station/${id}`;
+  return request(requestUrl, {
+    method: 'DELETE',
+  });
+}
+
+export async function updateStation(params) {
+  const {id} = params;
+  let requestUrl = `/api/station/${id}`;
+  return request(requestUrl, {
+    method: 'PATCH',
+    body: {
+      ..._.omit(params, ['name', 'longitude', 'latitude']),
+    },
+  });
+}
+
+export async function getStations(params) {
+  let requestUrl = '/api/station';
+  if (params) {
+    const {id} = params;
+    requestUrl = `/api/station/${id}`;
+  }
+  return request(requestUrl);
+}
 
 export async function queryProjectNotice() {
   return request('/api/project/notice');

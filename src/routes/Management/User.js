@@ -8,12 +8,7 @@ import {
   Form,
   Input,
   Select,
-  Icon,
   Button,
-  Dropdown,
-  Menu,
-  InputNumber,
-  DatePicker,
   Modal,
   message,
   Badge,
@@ -25,48 +20,88 @@ import PageHeaderLayout from '../../layouts/PageHeaderLayout';
 import styles from './User.less';
 
 const FormItem = Form.Item;
+const TextArea = Input.TextArea;
+const confirm = Modal.confirm;
 const { Option } = Select;
 const getValue = obj =>
   Object.keys(obj)
     .map(key => obj[key])
     .join(',');
-const statusMap = ['default', 'processing', 'success', 'error'];
-const status = ['关闭', '运行中', '已上线', '异常'];
+const privilegeMap = ['default', 'processing', 'success', 'error'];
+const privilege = ['已禁用', '普通用户', '管理员', '异常用户'];
 
-const CreateForm = Form.create()(props => {
-  const { modalVisible, form, handleAdd, handleModalVisible } = props;
+const UserForm = Form.create()(props => {
+  const { modalStatus, form, handleUserAdd, handleUserUpdate, handleModalStatusChange } = props;
+  const isAdd = () => modalStatus.user === null;
   const okHandle = () => {
     form.validateFields((err, fieldsValue) => {
       if (err) return;
       form.resetFields();
-      handleAdd(fieldsValue);
+      if (isAdd())
+        handleUserAdd(fieldsValue);
+      else
+        handleUserUpdate(fieldsValue);
     });
   };
+  const title = isAdd() ? '新建用户' : '编辑用户';
+  const initValue = isAdd() ? {name: "", privilege: "1", desc: ""} : modalStatus.user;
   return (
     <Modal
-      title="新建规则"
-      visible={modalVisible}
+      title = {title}
+      visible={modalStatus.visible}
       onOk={okHandle}
-      onCancel={() => handleModalVisible()}
+      onCancel={() => handleModalStatusChange()}
     >
-      <FormItem labelCol={{ span: 5 }} wrapperCol={{ span: 15 }} label="描述">
-        {form.getFieldDecorator('desc', {
+      <FormItem labelCol={{ span: 5 }} wrapperCol={{ span: 15 }} label="用户名">
+        {form.getFieldDecorator('usr_name', {
+          initialValue: initValue.name,
+          rules: [{ required: true, message: '用户名不能为空！' }],
+        })(<Input id="a" placeholder="请输入用户名" />)}
+      </FormItem>
+      <FormItem labelCol={{ span: 5 }} wrapperCol={{ span: 15 }} label="密码">
+        {form.getFieldDecorator('usr_pwd', {
+          rules: [
+            { required: true, message: '密码不能为空！' },
+            { max: 12, message: '密码长度应小于12位'},
+            { min: 8, message: '密码长度应大于8位'},
+          ],
+        })(<Input type="password" placeholder="请输入密码（8-12位）" autoComplete="new-password" />)}
+      </FormItem>
+      <FormItem labelCol={{ span: 5 }} wrapperCol={{ span: 15 }} label="用户权限">
+        {form.getFieldDecorator('usr_priv', {
+          initialValue: initValue.privilege,
           rules: [{ required: true, message: 'Please input some description...' }],
-        })(<Input placeholder="请输入" />)}
+        })(
+          <Select>
+            <Option value='0'>已禁用</Option>
+            <Option value='1'>普通用户</Option>
+            <Option value='2'>管理员</Option>
+          </Select>
+        )}
+      </FormItem>
+      <FormItem labelCol={{ span: 5 }} wrapperCol={{ span: 15 }} label="用户描述">
+        {form.getFieldDecorator('desc', {
+          initialValue: initValue.desc,
+          rules: [],
+        })(
+          <TextArea />
+        )}
       </FormItem>
     </Modal>
   );
 });
 
-@connect(({ rule, loading }) => ({
-  rule,
-  loading: loading.models.rule,
+@connect(({ userm, loading }) => ({
+  userm,
+  loading: loading.models.userm,
 }))
 @Form.create()
-export default class TableList extends PureComponent {
+export default class User extends PureComponent {
   state = {
-    modalVisible: false,
-    expandForm: false,
+    modalStatus: {
+      visible: false,
+      user: null,
+    },
     selectedRows: [],
     formValues: {},
   };
@@ -74,7 +109,7 @@ export default class TableList extends PureComponent {
   componentDidMount() {
     const { dispatch } = this.props;
     dispatch({
-      type: 'rule/fetch',
+      type: 'userm/fetch',
     });
   }
 
@@ -99,7 +134,7 @@ export default class TableList extends PureComponent {
     }
 
     dispatch({
-      type: 'rule/fetch',
+      type: 'userm/fetch',
       payload: params,
     });
   };
@@ -111,40 +146,9 @@ export default class TableList extends PureComponent {
       formValues: {},
     });
     dispatch({
-      type: 'rule/fetch',
+      type: 'userm/fetch',
       payload: {},
     });
-  };
-
-  toggleForm = () => {
-    this.setState({
-      expandForm: !this.state.expandForm,
-    });
-  };
-
-  handleMenuClick = e => {
-    const { dispatch } = this.props;
-    const { selectedRows } = this.state;
-
-    if (!selectedRows) return;
-
-    switch (e.key) {
-      case 'remove':
-        dispatch({
-          type: 'rule/remove',
-          payload: {
-            no: selectedRows.map(row => row.no).join(','),
-          },
-          callback: () => {
-            this.setState({
-              selectedRows: [],
-            });
-          },
-        });
-        break;
-      default:
-        break;
-    }
   };
 
   handleSelectRows = rows => {
@@ -171,29 +175,86 @@ export default class TableList extends PureComponent {
       });
 
       dispatch({
-        type: 'rule/fetch',
+        type: 'userm/fetch',
         payload: values,
       });
     });
   };
 
-  handleModalVisible = flag => {
+  handleModalStatusChange = (flag, user=null, e=null) => {
+    if (e !== null)
+      e.preventDefault();
     this.setState({
-      modalVisible: !!flag,
+      modalStatus: {
+        visible: !!flag,
+        user,
+      },
     });
   };
 
-  handleAdd = fields => {
+  showDeleteConfirm = (user, e, handleUserDelete) => {
+    e.preventDefault();
+    confirm({
+      title: '是否确认删除该用户?',
+      content: user.name,
+      okText: '确认',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk() {
+        handleUserDelete(user);
+      },
+    });
+  };
+
+  showDisableConfirm = (user, e, handleUserUpdate) => {
+    e.preventDefault();
+    confirm({
+      title: '是否确认禁用该用户?',
+      content: user.name,
+      okText: '确认',
+      cancelText: '取消',
+      onOk() {
+        handleUserUpdate({id: user.id, privilege: '0'});
+      },
+    });
+  };
+
+  handleUserAdd = fields => {
     this.props.dispatch({
-      type: 'rule/add',
+      type: 'userm/add',
       payload: {
         description: fields.desc,
       },
     });
 
-    message.success('添加成功');
+    message.success('用户添加成功');
     this.setState({
-      modalVisible: false,
+      modalStatus: {
+        visible: false,
+        user: null,
+      },
+    });
+  };
+
+  handleUserUpdate = fields => {
+    console.log(fields);
+    message.success('用户更新成功');
+    this.setState({
+      modalStatus: {
+        visible: false,
+        user: null,
+      },
+    });
+  };
+
+  handleUserDelete = (user) => {
+    console.log(user);
+    message.success('用户删除成功');
+    this.setState({
+      modalStatus: {
+        visible: false,
+        user: null,
+      },
     });
   };
 
@@ -203,16 +264,17 @@ export default class TableList extends PureComponent {
       <Form onSubmit={this.handleSearch} layout="inline">
         <Row gutter={{ md: 8, lg: 24, xl: 48 }}>
           <Col md={8} sm={24}>
-            <FormItem label="规则编号">
-              {getFieldDecorator('no')(<Input placeholder="请输入" />)}
+            <FormItem label="姓名">
+              {getFieldDecorator('name')(<Input placeholder="请输入" />)}
             </FormItem>
           </Col>
           <Col md={8} sm={24}>
-            <FormItem label="使用状态">
-              {getFieldDecorator('status')(
+            <FormItem label="用户权限">
+              {getFieldDecorator('privilege')(
                 <Select placeholder="请选择" style={{ width: '100%' }}>
-                  <Option value="0">关闭</Option>
-                  <Option value="1">运行中</Option>
+                  <Option value="0">已禁用</Option>
+                  <Option value="1">普通用户</Option>
+                  <Option value="2">管理员</Option>
                 </Select>
               )}
             </FormItem>
@@ -225,9 +287,6 @@ export default class TableList extends PureComponent {
               <Button style={{ marginLeft: 8 }} onClick={this.handleFormReset}>
                 重置
               </Button>
-              <a style={{ marginLeft: 8 }} onClick={this.toggleForm}>
-                展开 <Icon type="down" />
-              </a>
             </span>
           </Col>
         </Row>
@@ -235,158 +294,74 @@ export default class TableList extends PureComponent {
     );
   }
 
-  renderAdvancedForm() {
-    const { getFieldDecorator } = this.props.form;
-    return (
-      <Form onSubmit={this.handleSearch} layout="inline">
-        <Row gutter={{ md: 8, lg: 24, xl: 48 }}>
-          <Col md={8} sm={24}>
-            <FormItem label="规则编号">
-              {getFieldDecorator('no')(<Input placeholder="请输入" />)}
-            </FormItem>
-          </Col>
-          <Col md={8} sm={24}>
-            <FormItem label="使用状态">
-              {getFieldDecorator('status')(
-                <Select placeholder="请选择" style={{ width: '100%' }}>
-                  <Option value="0">关闭</Option>
-                  <Option value="1">运行中</Option>
-                </Select>
-              )}
-            </FormItem>
-          </Col>
-          <Col md={8} sm={24}>
-            <FormItem label="调用次数">
-              {getFieldDecorator('number')(<InputNumber style={{ width: '100%' }} />)}
-            </FormItem>
-          </Col>
-        </Row>
-        <Row gutter={{ md: 8, lg: 24, xl: 48 }}>
-          <Col md={8} sm={24}>
-            <FormItem label="更新日期">
-              {getFieldDecorator('date')(
-                <DatePicker style={{ width: '100%' }} placeholder="请输入更新日期" />
-              )}
-            </FormItem>
-          </Col>
-          <Col md={8} sm={24}>
-            <FormItem label="使用状态">
-              {getFieldDecorator('status3')(
-                <Select placeholder="请选择" style={{ width: '100%' }}>
-                  <Option value="0">关闭</Option>
-                  <Option value="1">运行中</Option>
-                </Select>
-              )}
-            </FormItem>
-          </Col>
-          <Col md={8} sm={24}>
-            <FormItem label="使用状态">
-              {getFieldDecorator('status4')(
-                <Select placeholder="请选择" style={{ width: '100%' }}>
-                  <Option value="0">关闭</Option>
-                  <Option value="1">运行中</Option>
-                </Select>
-              )}
-            </FormItem>
-          </Col>
-        </Row>
-        <div style={{ overflow: 'hidden' }}>
-          <span style={{ float: 'right', marginBottom: 24 }}>
-            <Button type="primary" htmlType="submit">
-              查询
-            </Button>
-            <Button style={{ marginLeft: 8 }} onClick={this.handleFormReset}>
-              重置
-            </Button>
-            <a style={{ marginLeft: 8 }} onClick={this.toggleForm}>
-              收起 <Icon type="up" />
-            </a>
-          </span>
-        </div>
-      </Form>
-    );
-  }
 
   renderForm() {
-    return this.state.expandForm ? this.renderAdvancedForm() : this.renderSimpleForm();
+    return this.renderSimpleForm();
   }
 
   render() {
-    const { rule: { data }, loading } = this.props;
-    const { selectedRows, modalVisible } = this.state;
-
+    const { userm: { data }, loading } = this.props;
+    const { selectedRows, modalStatus} = this.state;
     const columns = [
       {
-        title: '规则编号',
-        dataIndex: 'no',
+        title: '姓名',
+        dataIndex: 'name',
       },
       {
         title: '描述',
-        dataIndex: 'description',
+        dataIndex: 'desc',
+        // needTotal: true,
       },
       {
-        title: '服务调用次数',
-        dataIndex: 'callNo',
-        sorter: true,
-        align: 'right',
-        render: val => `${val} 万`,
-        // mark to display a total number
-        needTotal: true,
-      },
-      {
-        title: '状态',
-        dataIndex: 'status',
+        title: '用户权限',
+        dataIndex: 'privilege',
         filters: [
           {
-            text: status[0],
+            text: privilege[0],
             value: 0,
           },
           {
-            text: status[1],
+            text: privilege[1],
             value: 1,
           },
           {
-            text: status[2],
+            text: privilege[2],
             value: 2,
           },
           {
-            text: status[3],
+            text: privilege[3],
             value: 3,
           },
         ],
-        onFilter: (value, record) => record.status.toString() === value,
+        onFilter: (value, record) => record.privilege.toString() === value,
         render(val) {
-          return <Badge status={statusMap[val]} text={status[val]} />;
+          return <Badge status={privilegeMap[val]} text={privilege[val]} />;
         },
       },
       {
-        title: '更新时间',
-        dataIndex: 'updatedAt',
+        title: '上次登录时间',
+        dataIndex: 'lastLogin',
         sorter: true,
         render: val => <span>{moment(val).format('YYYY-MM-DD HH:mm:ss')}</span>,
       },
       {
         title: '操作',
-        render: () => (
+        render: (val, record) => (
           <Fragment>
-            <a href="">配置</a>
+            <a href="" onClick={e => this.handleModalStatusChange(true, record, e)}>修改</a>
             <Divider type="vertical" />
-            <a href="">订阅警报</a>
+            <a href="" onClick={e => this.showDisableConfirm(record, e, this.handleUserUpdate)}>禁用</a>
+            <Divider type="vertical" />
+            <a href="" onClick={e => this.showDeleteConfirm(record, e, this.handleUserDelete)}>删除</a>
           </Fragment>
         ),
       },
     ];
 
-    const menu = (
-      <Menu onClick={this.handleMenuClick} selectedKeys={[]}>
-        <Menu.Item key="remove">删除</Menu.Item>
-        <Menu.Item key="approval">批量审批</Menu.Item>
-      </Menu>
-    );
-
     const parentMethods = {
-      handleAdd: this.handleAdd,
-      handleModalVisible: this.handleModalVisible,
+      handleUserAdd: this.handleUserAdd,
+      handleModalStatusChange: this.handleModalStatusChange,
+      handleUserUpdate: this.handleUserUpdate,
     };
 
     return (
@@ -395,17 +370,12 @@ export default class TableList extends PureComponent {
           <div className={styles.tableList}>
             <div className={styles.tableListForm}>{this.renderForm()}</div>
             <div className={styles.tableListOperator}>
-              <Button icon="plus" type="primary" onClick={() => this.handleModalVisible(true)}>
+              <Button icon="plus" type="primary" onClick={() => this.handleModalStatusChange(true)}>
                 新建
               </Button>
               {selectedRows.length > 0 && (
                 <span>
-                  <Button>批量操作</Button>
-                  <Dropdown overlay={menu}>
-                    <Button>
-                      更多操作 <Icon type="down" />
-                    </Button>
-                  </Dropdown>
+                  <Button>批量删除</Button>
                 </span>
               )}
             </div>
@@ -419,7 +389,7 @@ export default class TableList extends PureComponent {
             />
           </div>
         </Card>
-        <CreateForm {...parentMethods} modalVisible={modalVisible} />
+        <UserForm {...parentMethods} modalStatus={modalStatus} />
       </PageHeaderLayout>
     );
   }

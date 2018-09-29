@@ -16,6 +16,7 @@ import { getRoutes } from '../utils/utils';
 import Authorized from '../utils/Authorized';
 import { getMenuData } from '../common/menu';
 import logo from '../assets/logo.svg';
+import _ from 'lodash';
 
 const { Content, Header, Footer } = Layout;
 const { AuthorizedRoute, check } = Authorized;
@@ -224,7 +225,7 @@ class BasicLayout extends React.PureComponent {
               {redirectData.map(item => (
                 <Redirect key={item.from} exact from={item.from} to={item.to} />
               ))}
-              {getRoutes(match.path, routerData).map(item => (
+              {getRoutes(match.path, _.omit(routerData, ['/dashboardant/monitor/:station'])).map(item => (
                 <AuthorizedRoute
                   key={item.key}
                   path={item.path}
@@ -234,6 +235,7 @@ class BasicLayout extends React.PureComponent {
                   redirectPath="/exception/403"
                 />
               ))}
+              <Route exact path="/dashboardant/monitor/:station" component={routerData['/dashboardant/monitor/:station'].component} />
               <Redirect exact from="/" to={bashRedirect} />
               <Route render={NotFound} />
             </Switch>

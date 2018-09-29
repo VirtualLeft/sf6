@@ -1,5 +1,7 @@
 import React, { PureComponent } from 'react';
 import autoHeight from '../autoHeight';
+import Debounce from 'lodash-decorators/debounce';
+import Bind from 'lodash-decorators/bind';
 import styles from './index.less';
 
 /* eslint no-return-assign: 0 */
@@ -27,7 +29,9 @@ export default class WaterWave extends PureComponent {
     window.removeEventListener('resize', this.resize);
   }
 
-  resize = () => {
+  @Bind()
+  @Debounce(400)
+  resize() {
     const { height } = this.props;
     const { offsetWidth } = this.root.parentNode;
     this.setState({

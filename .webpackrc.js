@@ -8,10 +8,17 @@ export default {
   env: {
     development: {
       extraBabelPlugins: ['dva-hmr'],
+      'proxy': {
+        '/api/station': {
+          'target': 'http://localhost:8000',
+          'changeOrigin': true
+        }
+      }
     },
   },
   alias: {
     components: path.resolve(__dirname, 'src/components/'),
+    assets: path.resolve(__dirname, 'src/assets/'),
   },
   ignoreMomentLocale: true,
   theme: './src/theme.js',

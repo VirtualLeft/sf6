@@ -72,25 +72,28 @@ export const getRouterData = app => {
     '/': {
       component: dynamicWrapper(app, ['user', 'login'], () => import('../layouts/BasicLayout')),
     },
-    '/dashboard/monitor': {
-      component: dynamicWrapper(app, ['monitor'], () => import('../routes/Dashboard/TotalMonitor')),
+    '/dashboardant/monitor': {
+      component: dynamicWrapper(app, ['monitor', 'station'], () => import('../routes/DashboardAnt/Monitor')),
     },
-    '/dashboard/analysis': {
-      component: dynamicWrapper(app, ['chart'], () => import('../routes/Dashboard/Analysis')),
+    '/dashboardant/monitor/:station': {
+      component: dynamicWrapper(app, ['chart'], () => import('../routes/DashboardAnt/StationMonitor')),
     },
-    '/dashboard/workplace': {
+    '/dashboardant/analysis': {
+      component: dynamicWrapper(app, ['chart'], () => import('../routes/DashboardAnt/Analysis')),
+    },
+    '/dashboardant/workplace': {
       component: dynamicWrapper(app, ['project', 'activities', 'chart'], () =>
-        import('../routes/Dashboard/Workplace')
+        import('../routes/DashboardAnt/Workplace')
       ),
       // hideInBreadcrumb: true,
       // name: '工作台',
       // authority: 'admin',
     },
     '/management/user': {
-      component: dynamicWrapper(app, ['list'], () => import('../routes/Management/User')),
+      component: dynamicWrapper(app, ['userm'], () => import('../routes/Management/User')),
     },
     '/management/station': {
-      component: dynamicWrapper(app, ['list'], () => import('../routes/List/BasicList')),
+      component: dynamicWrapper(app, ['station'], () => import('../routes/Management/Station')),
     },
     '/form/basic-form': {
       component: dynamicWrapper(app, ['form'], () => import('../routes/Forms/BasicForm')),
@@ -176,6 +179,11 @@ export const getRouterData = app => {
     },
     // '/user/:id': {
     //   component: dynamicWrapper(app, [], () => import('../routes/User/SomeComponent')),
+    // },
+    '/dashboard': {
+        component: dynamicWrapper(app, [], () => import('../routes/Dashboard')),
+    },
+    // '/dashdoard/overview': {
     // },
   };
   // Get name from ./menu.js or just set it in the router data.
